@@ -1,0 +1,801 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>מצא נקודת איסוף - דואר ישראל</title>
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --red: #C8102E;
+            --red-dark: #A00D24;
+            --red-light: #FEF2F2;
+            --red-100: #FEE2E2;
+            --green: #16A34A;
+            --green-light: #F0FDF4;
+            --green-dark: #15803D;
+            --blue: #2563EB;
+            --gray-50: #F9FAFB;
+            --gray-100: #F3F4F6;
+            --gray-200: #E5E7EB;
+            --gray-300: #D1D5DB;
+            --gray-400: #9CA3AF;
+            --gray-500: #6B7280;
+            --gray-600: #4B5563;
+            --gray-700: #374151;
+            --gray-800: #1F2937;
+            --gray-900: #111827;
+            --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
+            --shadow: 0 1px 3px rgba(0,0,0,0.1), 0 1px 2px rgba(0,0,0,0.06);
+            --shadow-md: 0 4px 6px rgba(0,0,0,0.07), 0 2px 4px rgba(0,0,0,0.06);
+            --shadow-lg: 0 10px 15px rgba(0,0,0,0.1), 0 4px 6px rgba(0,0,0,0.05);
+            --radius: 8px;
+        }
+
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+
+        body {
+            font-family: 'Heebo', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: var(--gray-100);
+            color: var(--gray-800);
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ===== Header ===== */
+        .header {
+            background: white;
+            padding: 0 24px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            height: 64px;
+            border-bottom: 1px solid var(--gray-200);
+            position: relative;
+            z-index: 100;
+        }
+        .header-right {
+            display: flex;
+            align-items: center;
+            gap: 14px;
+        }
+        .logo-mark {
+            flex-shrink: 0;
+            display: flex;
+            align-items: center;
+        }
+        .logo-mark img { height: 42px; width: auto; }
+        .header-title h1 {
+            font-size: 17px;
+            font-weight: 700;
+            color: var(--gray-900);
+            line-height: 1.2;
+        }
+        .header-title .subtitle {
+            font-size: 12px;
+            color: var(--gray-500);
+            font-weight: 400;
+        }
+        .header-left {
+            display: flex;
+            align-items: center;
+            gap: 6px;
+            font-size: 12px;
+            color: var(--gray-400);
+        }
+        .header-left .dot {
+            width: 6px; height: 6px;
+            background: var(--green);
+            border-radius: 50%;
+        }
+        .branch-total {
+            font-size: 12px;
+            color: var(--gray-500);
+            background: var(--gray-100);
+            padding: 4px 10px;
+            border-radius: 20px;
+            font-weight: 500;
+        }
+
+        /* ===== Layout ===== */
+        .layout {
+            display: flex;
+            height: calc(100vh - 64px);
+        }
+
+        /* ===== Sidebar ===== */
+        .sidebar {
+            width: 420px;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            border-left: 1px solid var(--gray-200);
+            flex-shrink: 0;
+        }
+
+        /* Search */
+        .search-section {
+            padding: 16px 20px;
+            background: white;
+            border-bottom: 1px solid var(--gray-200);
+        }
+        .search-section label {
+            display: block;
+            font-size: 13px;
+            font-weight: 600;
+            margin-bottom: 8px;
+            color: var(--gray-700);
+        }
+        .search-box {
+            position: relative;
+        }
+        .search-box input {
+            width: 100%;
+            padding: 11px 16px 11px 42px;
+            border: 1.5px solid var(--gray-300);
+            border-radius: var(--radius);
+            font-size: 14px;
+            font-family: inherit;
+            outline: none;
+            transition: all 0.2s;
+            direction: rtl;
+            background: white;
+            color: var(--gray-800);
+        }
+        .search-box input::placeholder { color: var(--gray-400); }
+        .search-box input:focus {
+            border-color: var(--red);
+            box-shadow: 0 0 0 3px rgba(200, 16, 46, 0.1);
+        }
+        .search-box .search-icon {
+            position: absolute;
+            left: 14px;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--gray-400);
+            pointer-events: none;
+        }
+        .search-box .search-icon svg { width: 16px; height: 16px; }
+
+        .autocomplete-list {
+            position: absolute;
+            top: calc(100% + 4px);
+            right: 0; left: 0;
+            background: white;
+            border: 1px solid var(--gray-200);
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-lg);
+            z-index: 200;
+            max-height: 260px;
+            overflow-y: auto;
+            display: none;
+        }
+        .autocomplete-item {
+            padding: 10px 16px;
+            cursor: pointer;
+            font-size: 13px;
+            border-bottom: 1px solid var(--gray-100);
+            direction: rtl;
+            color: var(--gray-700);
+            transition: background 0.1s;
+        }
+        .autocomplete-item:last-child { border-bottom: none; }
+        .autocomplete-item:hover, .autocomplete-item.active {
+            background: var(--red-light);
+            color: var(--red);
+        }
+
+        /* Filter */
+        .filter-section {
+            padding: 10px 20px;
+            border-bottom: 1px solid var(--gray-200);
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            background: var(--gray-50);
+        }
+        .filter-section label {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--gray-500);
+            white-space: nowrap;
+        }
+        .filter-section select {
+            flex: 1;
+            padding: 6px 10px;
+            border: 1px solid var(--gray-300);
+            border-radius: 6px;
+            font-size: 12px;
+            font-family: inherit;
+            direction: rtl;
+            background: white;
+            color: var(--gray-700);
+            outline: none;
+            cursor: pointer;
+        }
+        .filter-section select:focus {
+            border-color: var(--red);
+        }
+        .count-badge {
+            background: var(--red-light);
+            color: var(--red);
+            padding: 3px 10px;
+            border-radius: 20px;
+            font-size: 11px;
+            font-weight: 600;
+            white-space: nowrap;
+        }
+
+        /* Stats bar */
+        .stats {
+            padding: 10px 20px;
+            background: var(--green-light);
+            font-size: 13px;
+            color: var(--green-dark);
+            font-weight: 500;
+            border-bottom: 1px solid var(--gray-200);
+            display: none;
+            align-items: center;
+            gap: 6px;
+        }
+        .stats svg { width: 14px; height: 14px; flex-shrink: 0; }
+
+        /* Branch list */
+        .branch-list {
+            flex: 1;
+            overflow-y: auto;
+        }
+        .branch-list::-webkit-scrollbar { width: 4px; }
+        .branch-list::-webkit-scrollbar-thumb { background: var(--gray-300); border-radius: 2px; }
+
+        .empty-state {
+            padding: 60px 24px;
+            text-align: center;
+        }
+        .empty-state .icon-wrap {
+            width: 72px; height: 72px;
+            background: var(--red-light);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin: 0 auto 16px;
+        }
+        .empty-state .icon-wrap svg { width: 32px; height: 32px; color: var(--red); }
+        .empty-state h3 {
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--gray-800);
+            margin-bottom: 6px;
+        }
+        .empty-state p {
+            font-size: 13px;
+            color: var(--gray-500);
+            line-height: 1.6;
+        }
+
+        .branch-item {
+            padding: 14px 20px;
+            border-bottom: 1px solid var(--gray-100);
+            cursor: pointer;
+            transition: background 0.15s;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        .branch-item:hover { background: var(--gray-50); }
+        .branch-item.highlighted { background: var(--green-light); }
+
+        .branch-rank {
+            width: 28px;
+            height: 28px;
+            border-radius: 50%;
+            background: var(--gray-100);
+            color: var(--gray-600);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 11px;
+            font-weight: 700;
+            flex-shrink: 0;
+            margin-top: 1px;
+            border: 1.5px solid var(--gray-200);
+        }
+        .branch-item.highlighted .branch-rank {
+            background: var(--green);
+            color: white;
+            border-color: var(--green);
+        }
+
+        .branch-info { flex: 1; min-width: 0; }
+        .branch-name {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--gray-800);
+            margin-bottom: 2px;
+        }
+        .branch-address {
+            font-size: 12px;
+            color: var(--gray-500);
+            margin-bottom: 3px;
+        }
+        .branch-distance {
+            font-size: 12px;
+            font-weight: 600;
+            color: var(--red);
+        }
+        .branch-item.highlighted .branch-distance {
+            color: var(--green-dark);
+        }
+        .best-tag {
+            display: inline-block;
+            background: var(--green);
+            color: white;
+            font-size: 10px;
+            font-weight: 600;
+            padding: 1px 6px;
+            border-radius: 3px;
+            margin-right: 4px;
+            vertical-align: middle;
+        }
+
+        /* ===== Map ===== */
+        .map-container {
+            flex: 1;
+            position: relative;
+        }
+        #map { width: 100%; height: 100%; }
+
+        /* Override leaflet popups */
+        .leaflet-popup-content-wrapper {
+            border-radius: var(--radius) !important;
+            box-shadow: var(--shadow-lg) !important;
+            font-family: 'Heebo', sans-serif !important;
+        }
+        .leaflet-popup-content { margin: 12px 14px !important; }
+        .leaflet-popup-tip { box-shadow: var(--shadow) !important; }
+
+        .popup-inner { direction: rtl; text-align: right; min-width: 180px; }
+        .popup-name { font-size: 14px; font-weight: 700; color: var(--gray-900); margin-bottom: 3px; }
+        .popup-addr { font-size: 13px; color: var(--gray-600); }
+        .popup-city { font-size: 12px; color: var(--gray-400); margin-top: 1px; }
+        .popup-dist {
+            font-size: 13px; font-weight: 600; color: var(--red);
+            margin-top: 6px; padding-top: 6px;
+            border-top: 1px solid var(--gray-200);
+        }
+
+        /* Legend */
+        .map-legend {
+            position: absolute;
+            bottom: 24px;
+            left: 16px;
+            z-index: 400;
+            background: white;
+            padding: 12px 16px;
+            border-radius: var(--radius);
+            box-shadow: var(--shadow-md);
+            font-size: 12px;
+            color: var(--gray-600);
+        }
+        .legend-row { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+        .legend-row:last-child { margin-bottom: 0; }
+        .legend-dot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; border: 2px solid white; box-shadow: 0 0 3px rgba(0,0,0,0.25); }
+
+        /* Mobile */
+        .mobile-toggle {
+            display: none;
+            position: fixed;
+            bottom: 24px;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 500;
+            background: var(--red);
+            color: white;
+            border: none;
+            padding: 12px 28px;
+            border-radius: 24px;
+            font-size: 14px;
+            font-weight: 600;
+            font-family: inherit;
+            box-shadow: var(--shadow-lg);
+            cursor: pointer;
+            transition: background 0.15s;
+        }
+        .mobile-toggle:active { background: var(--red-dark); }
+
+        @media (max-width: 768px) {
+            .header { padding: 0 16px; height: 56px; }
+            .header-left { display: none; }
+            .header-title h1 { font-size: 15px; }
+            .layout { flex-direction: column-reverse; }
+            .sidebar {
+                width: 100%;
+                height: 50vh;
+                border-left: none;
+                border-top: 1px solid var(--gray-200);
+            }
+            .map-container { height: 50vh; }
+            .mobile-toggle { display: block; }
+            .sidebar.hidden { display: none; }
+            .sidebar.hidden + .map-container { height: calc(100vh - 56px); }
+        }
+    </style>
+</head>
+<body>
+    <div class="header">
+        <div class="header-right">
+            <div class="logo-mark">
+                <img src="logo_170x92.png" alt="דואר ישראל" />
+            </div>
+            <div class="header-title">
+                <h1>נקודות איסוף חבילות</h1>
+                <div class="subtitle">דואר ישראל - מצא את הסניף הקרוב אליך</div>
+            </div>
+        </div>
+        <div class="header-left">
+            <span class="branch-total" id="totalBadge"></span>
+        </div>
+    </div>
+
+    <div class="layout">
+        <div class="sidebar" id="sidebar">
+            <div class="search-section">
+                <label>מה הכתובת שלך?</label>
+                <div class="search-box">
+                    <input type="text" id="addressInput" placeholder="לדוגמה: דיזנגוף 50, תל אביב" autocomplete="off" />
+                    <span class="search-icon">
+                        <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M9 3.5a5.5 5.5 0 100 11 5.5 5.5 0 000-11zM2 9a7 7 0 1112.452 4.391l3.328 3.329a.75.75 0 11-1.06 1.06l-3.329-3.328A7 7 0 012 9z" clip-rule="evenodd"/></svg>
+                    </span>
+                    <div class="autocomplete-list" id="autocomplete"></div>
+                </div>
+            </div>
+
+            <div class="filter-section">
+                <label>עיר:</label>
+                <select id="cityFilter">
+                    <option value="">כל הערים</option>
+                </select>
+                <span class="count-badge" id="countBadge">0 סניפים</span>
+            </div>
+
+            <div class="stats" id="stats">
+                <svg viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.857-9.809a.75.75 0 00-1.214-.882l-3.483 4.79-1.88-1.88a.75.75 0 10-1.06 1.061l2.5 2.5a.75.75 0 001.137-.089l4-5.5z" clip-rule="evenodd"/></svg>
+                <span id="statsText"></span>
+            </div>
+
+            <div class="branch-list" id="branchList">
+                <div class="empty-state">
+                    <div class="icon-wrap">
+                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M15 10.5a3 3 0 11-6 0 3 3 0 016 0z"/><path stroke-linecap="round" stroke-linejoin="round" d="M19.5 10.5c0 7.142-7.5 11.25-7.5 11.25S4.5 17.642 4.5 10.5a7.5 7.5 0 1115 0z"/></svg>
+                    </div>
+                    <h3>היכן לאסוף את החבילה?</h3>
+                    <p>הכנס את הכתובת שלך למעלה<br>ונמצא את נקודות האיסוף הקרובות</p>
+                </div>
+            </div>
+        </div>
+
+        <div class="map-container">
+            <div id="map"></div>
+            <div class="map-legend" id="mapLegend" style="display:none;">
+                <div class="legend-row">
+                    <div class="legend-dot" style="background:var(--red)"></div>
+                    <span>הכתובת שלך</span>
+                </div>
+                <div class="legend-row">
+                    <div class="legend-dot" style="background:var(--green)"></div>
+                    <span>3 הקרובים ביותר</span>
+                </div>
+                <div class="legend-row">
+                    <div class="legend-dot" style="background:#6366F1"></div>
+                    <span>נקודת איסוף</span>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <button class="mobile-toggle" id="mobileToggle" onclick="toggleMobileSidebar()">הצג רשימה</button>
+
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script>
+    let BRANCHES = [];
+    let userCoords = null;
+    let markers = [];
+    let homeMarker = null;
+    let lines = [];
+    let autocompleteTimeout = null;
+    let selectedAutoIndex = -1;
+
+    // ===== Map with CartoDB Voyager (Google Maps-like) =====
+    const map = L.map('map', { zoomControl: true }).setView([31.5, 34.8], 8);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
+        attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OSM</a> &copy; <a href="https://carto.com/">CARTO</a>',
+        maxZoom: 19,
+        subdomains: 'abcd',
+    }).addTo(map);
+
+    // ===== Icons =====
+    function makeDot(color, size, shadow) {
+        return L.divIcon({
+            html: `<div style="width:${size}px;height:${size}px;background:${color};border:2.5px solid #fff;border-radius:50%;box-shadow:0 1px 4px rgba(0,0,0,${shadow || 0.3})"></div>`,
+            iconSize: [size, size],
+            iconAnchor: [size/2, size/2],
+            className: ''
+        });
+    }
+    function makeHomeIcon() {
+        return L.divIcon({
+            html: `<div style="position:relative;width:32px;height:32px">
+                <div style="position:absolute;inset:0;background:var(--red,#C8102E);border:3px solid #fff;border-radius:50%;box-shadow:0 2px 8px rgba(0,0,0,0.3)"></div>
+                <svg style="position:absolute;top:7px;left:7px;width:18px;height:18px" viewBox="0 0 20 20" fill="white"><path d="M10 2L3 9h2v7h4v-4h2v4h4V9h2L10 2z"/></svg>
+            </div>`,
+            iconSize: [32, 32],
+            iconAnchor: [16, 16],
+            className: ''
+        });
+    }
+    const homeIcon = makeHomeIcon();
+    const closeIcon = makeDot('#16A34A', 16, 0.35);
+    const branchIcon = makeDot('#6366F1', 11, 0.25);
+
+    // ===== Utils =====
+    function haversine(lat1, lon1, lat2, lon2) {
+        const R = 6371;
+        const dLat = (lat2 - lat1) * Math.PI / 180;
+        const dLon = (lon2 - lon1) * Math.PI / 180;
+        const a = Math.sin(dLat/2)**2 + Math.cos(lat1*Math.PI/180)*Math.cos(lat2*Math.PI/180)*Math.sin(dLon/2)**2;
+        return R * 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
+    }
+
+    function formatDist(km) {
+        if (km < 1) return `${Math.round(km * 1000)} מטר`;
+        return `${km.toFixed(1)} ק"מ`;
+    }
+
+    function buildAddress(b) {
+        let addr = '';
+        if (b.street) {
+            addr = b.street;
+            if (b.house && b.house > 0) addr += ` ${b.house}`;
+        }
+        if (b.addressdesc) {
+            if (addr) addr += ` (${b.addressdesc})`;
+            else addr = b.addressdesc;
+        }
+        return addr || b.city;
+    }
+
+    // ===== Load data =====
+    async function loadBranches() {
+        try {
+            const resp = await fetch('branches_geo.json');
+            BRANCHES = await resp.json();
+            BRANCHES = BRANCHES.filter(b => b.lat && b.lon);
+            document.getElementById('totalBadge').textContent = `${BRANCHES.length} נקודות איסוף`;
+            populateCityFilter();
+            showAllBranchesOnMap();
+        } catch(e) {
+            console.error('Failed to load branches:', e);
+            document.getElementById('branchList').innerHTML = `
+                <div class="empty-state">
+                    <div class="icon-wrap"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v3.75m9-.75a9 9 0 11-18 0 9 9 0 0118 0zm-9 3.75h.008v.008H12v-.008z"/></svg></div>
+                    <h3>שגיאה בטעינת הנתונים</h3>
+                    <p>ודא שהקובץ branches_geo.json קיים<br>ושהאתר מופעל דרך שרת HTTP</p>
+                </div>`;
+        }
+    }
+
+    // ===== City filter =====
+    function populateCityFilter() {
+        const cityCounts = {};
+        BRANCHES.forEach(b => { cityCounts[b.city] = (cityCounts[b.city] || 0) + 1; });
+        const cities = Object.keys(cityCounts).sort();
+        const select = document.getElementById('cityFilter');
+        cities.forEach(c => {
+            const opt = document.createElement('option');
+            opt.value = c;
+            opt.textContent = `${c} (${cityCounts[c]})`;
+            select.appendChild(opt);
+        });
+        updateCount();
+    }
+
+    document.getElementById('cityFilter').addEventListener('change', () => {
+        updateDisplay();
+    });
+
+    function getFilteredBranches() {
+        const city = document.getElementById('cityFilter').value;
+        if (!city) return BRANCHES;
+        return BRANCHES.filter(b => b.city === city);
+    }
+
+    function updateCount() {
+        document.getElementById('countBadge').textContent = `${getFilteredBranches().length} סניפים`;
+    }
+
+    // ===== Map display =====
+    function showAllBranchesOnMap() {
+        clearMarkers();
+        const filtered = getFilteredBranches();
+        const bounds = [];
+        filtered.forEach(b => {
+            const m = L.marker([b.lat, b.lon], { icon: branchIcon }).addTo(map);
+            m.bindPopup(makePopup(b));
+            markers.push(m);
+            bounds.push([b.lat, b.lon]);
+        });
+        if (bounds.length) map.fitBounds(bounds, { padding: [30, 30] });
+        updateCount();
+    }
+
+    function clearMarkers() {
+        markers.forEach(m => map.removeLayer(m));
+        markers = [];
+        lines.forEach(l => map.removeLayer(l));
+        lines = [];
+        if (homeMarker) { map.removeLayer(homeMarker); homeMarker = null; }
+    }
+
+    function makePopup(b) {
+        const addr = buildAddress(b);
+        let dist = '';
+        if (b._distance !== undefined) {
+            dist = `<div class="popup-dist">${formatDist(b._distance)} ממך (קו אווירי)</div>`;
+        }
+        return `<div class="popup-inner">
+            <div class="popup-name">${b.branchname}</div>
+            <div class="popup-addr">${addr}</div>
+            <div class="popup-city">${b.city}</div>
+            ${dist}
+        </div>`;
+    }
+
+    // ===== Geocode =====
+    async function geocodeAddress(query) {
+        const url = `https://nominatim.openstreetmap.org/search?q=${encodeURIComponent(query)}&format=json&limit=5&countrycodes=il&accept-language=he`;
+        const resp = await fetch(url, { headers: { 'Accept-Language': 'he' } });
+        return await resp.json();
+    }
+
+    // ===== Autocomplete =====
+    const input = document.getElementById('addressInput');
+    const acList = document.getElementById('autocomplete');
+
+    input.addEventListener('input', () => {
+        clearTimeout(autocompleteTimeout);
+        selectedAutoIndex = -1;
+        const q = input.value.trim();
+        if (q.length < 3) { acList.style.display = 'none'; return; }
+        autocompleteTimeout = setTimeout(async () => {
+            const results = await geocodeAddress(q);
+            if (!results.length) { acList.style.display = 'none'; return; }
+            acList.innerHTML = '';
+            results.forEach((r) => {
+                const item = document.createElement('div');
+                item.className = 'autocomplete-item';
+                item.textContent = r.display_name;
+                item.addEventListener('click', () => selectAddress(r));
+                acList.appendChild(item);
+            });
+            acList.style.display = 'block';
+        }, 500);
+    });
+
+    input.addEventListener('keydown', (e) => {
+        const items = acList.querySelectorAll('.autocomplete-item');
+        if (!items.length) return;
+        if (e.key === 'ArrowDown') {
+            e.preventDefault();
+            selectedAutoIndex = Math.min(selectedAutoIndex + 1, items.length - 1);
+            items.forEach((it, i) => it.classList.toggle('active', i === selectedAutoIndex));
+        } else if (e.key === 'ArrowUp') {
+            e.preventDefault();
+            selectedAutoIndex = Math.max(selectedAutoIndex - 1, 0);
+            items.forEach((it, i) => it.classList.toggle('active', i === selectedAutoIndex));
+        } else if (e.key === 'Enter') {
+            e.preventDefault();
+            if (selectedAutoIndex >= 0 && items[selectedAutoIndex]) {
+                items[selectedAutoIndex].click();
+            }
+        }
+    });
+
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.search-box')) acList.style.display = 'none';
+    });
+
+    function selectAddress(result) {
+        acList.style.display = 'none';
+        input.value = result.display_name;
+        userCoords = [parseFloat(result.lat), parseFloat(result.lon)];
+        updateDisplay();
+    }
+
+    // ===== Main update =====
+    function updateDisplay() {
+        clearMarkers();
+        const filtered = getFilteredBranches();
+        updateCount();
+
+        if (!userCoords) {
+            showAllBranchesOnMap();
+            document.getElementById('stats').style.display = 'none';
+            document.getElementById('mapLegend').style.display = 'none';
+            return;
+        }
+
+        filtered.forEach(b => {
+            b._distance = haversine(userCoords[0], userCoords[1], b.lat, b.lon);
+        });
+
+        const sorted = [...filtered].sort((a, b) => a._distance - b._distance);
+        const top3 = new Set(sorted.slice(0, 3).map(b => b.branchnumber));
+
+        homeMarker = L.marker(userCoords, { icon: homeIcon, zIndexOffset: 1000 }).addTo(map);
+        homeMarker.bindPopup(`<div class="popup-inner"><div class="popup-name" style="color:var(--red)">הכתובת שלך</div></div>`);
+
+        const allCoords = [userCoords];
+        sorted.forEach(b => {
+            const isTop = top3.has(b.branchnumber);
+            const m = L.marker([b.lat, b.lon], {
+                icon: isTop ? closeIcon : branchIcon,
+                zIndexOffset: isTop ? 500 : 0
+            }).addTo(map);
+            m.bindPopup(makePopup(b));
+            markers.push(m);
+            b._marker = m;
+            allCoords.push([b.lat, b.lon]);
+
+            if (isTop) {
+                lines.push(L.polyline([userCoords, [b.lat, b.lon]], {
+                    color: '#16A34A', weight: 2, opacity: 0.35, dashArray: '6,8'
+                }).addTo(map));
+            }
+        });
+
+        const topN = sorted.slice(0, Math.min(10, sorted.length));
+        map.fitBounds([userCoords, ...topN.map(b => [b.lat, b.lon])], { padding: [50, 50] });
+
+        const statsEl = document.getElementById('stats');
+        statsEl.style.display = 'flex';
+        document.getElementById('statsText').textContent = `הסניף הקרוב: ${sorted[0].branchname} (${formatDist(sorted[0]._distance)})`;
+
+        document.getElementById('mapLegend').style.display = 'block';
+
+        const listEl = document.getElementById('branchList');
+        listEl.innerHTML = '';
+        sorted.forEach((b, i) => {
+            const isTop = top3.has(b.branchnumber);
+            const item = document.createElement('div');
+            item.className = 'branch-item' + (isTop ? ' highlighted' : '');
+            item.innerHTML = `
+                <div class="branch-rank">${i + 1}</div>
+                <div class="branch-info">
+                    <div class="branch-name">${b.branchname}</div>
+                    <div class="branch-address">${buildAddress(b)}, ${b.city}</div>
+                    <div class="branch-distance">${formatDist(b._distance)}${isTop ? ' <span class="best-tag">קרוב</span>' : ''}</div>
+                </div>
+            `;
+            item.addEventListener('click', () => {
+                map.setView([b.lat, b.lon], 16);
+                b._marker.openPopup();
+            });
+            listEl.appendChild(item);
+        });
+    }
+
+    function toggleMobileSidebar() {
+        const sb = document.getElementById('sidebar');
+        const btn = document.getElementById('mobileToggle');
+        sb.classList.toggle('hidden');
+        btn.textContent = sb.classList.contains('hidden') ? 'הצג רשימה' : 'הצג מפה';
+        setTimeout(() => map.invalidateSize(), 300);
+    }
+
+    loadBranches();
+    </script>
+</body>
+</html>

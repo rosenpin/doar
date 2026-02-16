@@ -1,0 +1,22 @@
+# Downloaded pages (may contain session/tracking data)
+page.html
+page2.html
+
+# Old map with hardcoded personal address
+pickup-map.html
+
+# Geocoding scripts (build artifacts, not needed for the site)
+geocode_branches.py
+geocode_failed.py
+geocode_manual.py
+
+# Raw data (branches_geo.json is the final version)
+branches.json
+failed_branches.json
+
+# Duplicate logo
+logo.png
+
+# OS files
+.DS_Store
+.claude/
